@@ -32,6 +32,9 @@ const userSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
         },
+        refreshToken: {
+            type: String,
+        },
     },
     {
         timestamps: true
@@ -54,7 +57,7 @@ userSchema.methods.isPasswordCorrect = async function (password) {
 
 // custom method -> to generate short span accessToken
 userSchema.methods.generateAccessToken = function() {
-    jwt.sign(
+    return jwt.sign(
 
         //payload 
         {
@@ -75,7 +78,7 @@ userSchema.methods.generateAccessToken = function() {
 
 // custom method -> to generate long span refreshToken
 userSchema.methods.generateRefreshToken = function() {
-    jwt.sign(
+    return jwt.sign(
 
         // payload
         {
