@@ -128,7 +128,6 @@ const loginUser = asyncHandler( async (req, res) => {
 
 });
 
-
 const logoutUser = asyncHandler( async (req, res) => {
 
     // use the manually created req.user object to find the user
@@ -162,7 +161,7 @@ const logoutUser = asyncHandler( async (req, res) => {
             "User logged out",
         )
     )
-})
+});
 
 const regenerateAccessAndRefreshToken = asyncHandler(async (req, res) => {
     try {
@@ -218,11 +217,97 @@ const regenerateAccessAndRefreshToken = asyncHandler(async (req, res) => {
     } catch (error) {
         throw new ApiError(401, error?.message || "Inavlid Refresh Token");
     }
-})
+});
+
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+    const {currentPassword, newPassword} = req.body;
+
+    const user = await User.findById(req.user?._id);
+    const isPasswordCorrect = await user.isPasswordCorrect(currentPassword);
+
+    if (!isPasswordCorrect) {
+        throw new ApiError(400, "Invalid current password");
+    }
+
+    user.password = newPassword;
+    await user.save({ validateBeforeSave: false});
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200, 
+            {},
+            "Password updated successfully"
+        )
+    )
+});
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            req.user,
+            "Successfully returned the current user"
+        )
+    )
+});
+
+const updateAccountDetails = asyncHandler(async (req, res) => {
+
+    // extracting the user details from the req body
+    const { name, email } = req.body;
+
+    // DOUBT: How can I write a single .some method for both of the below 3-if conditions
+    // checking if we have received atleast a single field criteria to update
+    if (!(name || email)) {
+        throw new ApiError(400, "Atleast update a single field to proceed");
+    }
+    
+    // Checking if name is received and is diff from the previously stored value in the database
+    if ( name && name === req.user?.name) {
+        throw new ApiError(400, "Try something new");
+    }
+
+    // Checking if email is received and is diff from the previously stored value in the database
+    if ( email && email === req.user?.email) {
+        throw new ApiError(400, "Try something new");
+    }
+
+    // update the requested field 
+    const updatedUser = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                name,
+                email,
+            }
+        },
+        { new: true },
+    ).select(" -password -refreshToken");
+
+    // returning the response
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            updatedUser,
+            "User details updated successfully",
+        )
+    );
+});
+
 
 export {
     registerUser,
     loginUser,
     logoutUser,
     regenerateAccessAndRefreshToken,
+    changeCurrentPassword,
+    getCurrentUser,
+    updateAccountDetails,
 }
